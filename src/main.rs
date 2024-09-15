@@ -48,6 +48,12 @@ async fn main() {
                             .await?;
                         }
                     }
+                    Command::Help => {
+                        let general_help = "Tällä botilla voit tallentaa kuvan omasta Joutotakistasi ja näyttää siitä helposti kuvan kun tarvitset jonkun hakemaan takkisi solusta. Riittää että lähetät kuvan takistasi yksityisviestillä niin se tallentuu.";
+                        let descriptions = Command::descriptions().to_string();
+                        bot.send_message(msg.chat.id, format!("{}\n{}", general_help, descriptions))
+                            .await?;
+                    }
                 }
             }
         }
@@ -57,11 +63,10 @@ async fn main() {
 }
 
 #[derive(BotCommands, Clone)]
-#[command(
-    rename_rule = "lowercase",
-    description = "These commands are supported:"
-)]
+#[command(rename_rule = "lowercase", description = "")]
 enum Command {
     #[command(description = "Lähettää kuvan takistasi")]
     MunTakki,
+    #[command(description = "Näyttää tämän viestin")]
+    Help,
 }
