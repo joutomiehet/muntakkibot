@@ -27,7 +27,7 @@ async fn main() {
                 // Download photo
                 let response = reqwest::get(&file_url).await?;
                 let bytes = response.bytes().await?;
-                let mut file = File::create(format!("takki_{}.jpg", msg.from.unwrap().id))?;
+                let mut file = File::create(format!("/usr/src/muntakkibot/images/takki_{}.jpg", msg.from.unwrap().id))?;
                 file.write_all(&bytes)?;
                 bot.send_message(msg.chat.id, "Photo received and saved!")
                     .await?;
@@ -36,7 +36,7 @@ async fn main() {
             if let Ok(cmd) = Command::parse(text, "MunTakkiBot") {
                 match cmd {
                     Command::MunTakki => {
-                        let filename = format!("takki_{}.jpg", msg.from.as_ref().unwrap().id);
+                        let filename = format!("/usr/src/muntakkibot/images/takki_{}.jpg", msg.from.as_ref().unwrap().id);
                         if Path::new(&filename).exists() {
                             let file = InputFile::file(filename);
                             bot.send_photo(msg.chat.id, file).await?;
