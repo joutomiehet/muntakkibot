@@ -1,0 +1,10 @@
+version: '3.8'
+
+services:
+  muntakkibot:
+    build: .
+    environment:
+      TELOXIDE_TOKEN: "<token>"
+    volumes:
+      - .:/usr/src/muntakkibot
+    command: ["mun_takki_bot"]
