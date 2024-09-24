@@ -2,3 +2,4 @@
 *.jpg
 *.png
 /images
+docker-compose.yml

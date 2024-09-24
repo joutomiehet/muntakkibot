@@ -1,7 +1,16 @@
-# Build image
+# Example of a docker-compose.yml file
 
-docker build -t muntakkibot .
+version: '3.8'
 
-# Run container with volumes
+services:
+muntakkibot:
+build: .
+environment:
+TELOXIDE_TOKEN: "<token>"
+volumes: - .:/usr/src/muntakkibot
+command: ["mun_takki_bot"]
 
-docker run -e TELOXIDE_TOKEN="<your_actual_token>" -v /<absolute_path_to_image_folder>:/usr/src/muntakkibot/images mun_takki_bot
+# Running
+
+Insert your bots token in the TELOXIDE_TOKEN then
+docker compose up -d
