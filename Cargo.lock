@@ -670,6 +670,7 @@ dependencies = [
  "dotenv",
  "log",
  "pretty_env_logger",
+ "regex",
  "reqwest",
  "teloxide",
  "tokio",
