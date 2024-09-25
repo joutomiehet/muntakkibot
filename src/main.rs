@@ -1,3 +1,4 @@
+use dotenv::dotenv;
 use reqwest;
 use std::fs::File;
 use std::io::Write;
@@ -8,6 +9,7 @@ use tokio;
 #[tokio::main]
 async fn main() {
     pretty_env_logger::init();
+    dotenv().ok();
     log::info!("Starting bot");
 
     let bot = Bot::from_env();
