@@ -1,16 +1,20 @@
-# Example of a docker-compose.yml file
+# MunTakkiBot
 
-version: '3.8'
+## quickstart
 
-services:
-muntakkibot:
-build: .
-environment:
-TELOXIDE_TOKEN: "<token>"
-volumes: - .:/usr/src/muntakkibot
-command: ["mun_takki_bot"]
+### Generate `.env`
 
-# Running
+```sh
+cat << EOF > .env
+TELOXIDE_TOKEN=<token>
+UID=$(id -u)
+GID=$(id -g)
+IMAGES=./images
+EOF
+```
 
-Insert your bots token in the TELOXIDE_TOKEN then
+### Run container
+
+```sh
 docker compose up -d
+```
