@@ -3,6 +3,8 @@ services:
     build: .
     env_file:
       - .env
+    environment:
+      IMAGE_DIR: /usr/src/muntakkibot/images
     user: ${UID}:${GID}
     volumes:
       - ${IMAGES}:/usr/src/muntakkibot/images
