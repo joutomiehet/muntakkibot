@@ -9,3 +9,4 @@ services:
     volumes:
       - ${IMAGES}:/usr/src/muntakkibot/images
     command: ["mun_takki_bot"]
+    restart: unless-stopped
