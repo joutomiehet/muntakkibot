@@ -53,15 +53,14 @@ async fn main() {
                         let user = msg.from.as_ref().unwrap();
                         let user_id = user.id.to_string();
                         let nickname = user.username.as_deref().unwrap_or_default();
-                        let name = &user.first_name;
 
                         fix_file_name(&user_id, nickname);
 
                         // Create regex to find takki by either ID or telegram nickname
                         // Try id first in case nickname has changed
-                        let re = Regex::new(&format!(r"takki_({}|{})_.*\.jpg", user_id, name)).unwrap();
+                        let re = Regex::new(&format!(r"(?i)takki_({}|{})_.*\.jpg", user_id, nickname)).unwrap();
 
-                        let _ = get_takki(&msg, &bot, re, &name).await;
+                        let _ = get_takki(&msg, &bot, re, &nickname).await;
                     }
                     
                     Command::SunTakki => {
@@ -72,7 +71,7 @@ async fn main() {
                         } else {
                             for nick in &message[1..] {
                                 let nick_cleaned = nick.trim_start_matches("@");
-                                let re = Regex::new(&format!(r"takki_.*_({}).jpg", nick_cleaned)).unwrap();
+                                let re = Regex::new(&format!(r"(?i)takki_.*_({}).jpg", nick_cleaned)).unwrap();
                                 let _ = get_takki(&msg, &bot, re, nick).await;
                             }
                         }
@@ -137,11 +136,6 @@ fn fix_file_name(user_id: &str, nickname: &str) {
     let old_path = Path::new(&old_filename);
     let new_path = Path::new(&new_filename);
 
-    // No old path? No problem!
-    if !old_path.exists() {
-        return
-    }
-
     // Remove the old file
     if old_path.exists() && new_path.exists() {
         println!("Both exist!");
@@ -157,6 +151,35 @@ fn fix_file_name(user_id: &str, nickname: &str) {
         match fs::rename(&old_path, &new_path) {
             Ok(_) => (),
             Err(e) => println!("Failed to rename file: {}", e),
+        }
+    }
+
+    // Nickname has changed?
+    let re = Regex::new(&format!(r"(?i)takki_{}_([^_]+)\.jpg", user_id)).unwrap();
+    let photos = fs::read_dir(&image_dir).expect("Failed to load images in fix_file_name");
+    for photo in photos {
+        let p = photo.expect("Error in getting photo");
+        let file_name = p.file_name();
+        let file_name = file_name.to_string_lossy();
+
+        // Obtain possible old nickname
+        if let Some(captures) = re.captures(&file_name) {
+            let old_nickname = captures.get(1).unwrap().as_str(); // Extract the captured nickname part
+
+            // Compare old and new nicknames case-insensitively
+            if !old_nickname.eq_ignore_ascii_case(nickname) {
+                let old_path = p.path();
+
+                // Create a new file path with the updated nickname
+                let new_filename = format!("{}/takki_{}_{}.jpg", image_dir, user_id, nickname);
+                let new_path = Path::new(&new_filename);
+
+                // Rename the file
+                match fs::rename(&old_path, &new_path) {
+                    Ok(()) => println!("File renamed from {:?} to {:?}", old_path, new_path),
+                    Err(e) => println!("Failed to rename file: {}", e),
+                }
+            }
         }
     }
 
