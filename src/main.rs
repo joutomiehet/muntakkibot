@@ -1,10 +1,6 @@
 use dotenv::dotenv;
-use reqwest;
-use std::fs::{self, File};
-use std::io::Write;
-use std::path::Path;
-use teloxide::{prelude::*, utils::command::BotCommands};
-use tokio;
+use std::fs;
+use teloxide::{net::Download, prelude::*, utils::command::BotCommands};
 
 mod commands;
 mod helpers;
@@ -16,6 +12,7 @@ async fn main() {
     pretty_env_logger::init();
     dotenv().ok();
     log::info!("Starting bot");
+    fs::create_dir_all(&*IMAGE_DIR).expect("Failed to create image directory");
     let bot: Bot = Bot::from_env();
 
     bot.set_my_commands(Command::bot_commands())
@@ -28,35 +25,22 @@ async fn main() {
         if let Some(photo) = msg.photo()
             && msg.chat.is_private()
         {
+            let Some(user) = &msg.from else {
+                return Ok(());
+            };
             if let Some(last_photo) = photo.last() {
                 let file_id: &String = &last_photo.file.id;
                 let file: teloxide::types::File = bot.get_file(file_id).await?;
-                let file_path: String = file.path;
-                let file_url: String = format!(
-                    "https://api.telegram.org/file/bot{}/{}",
-                    bot.token(),
-                    file_path
-                );
+
                 // Download photo
-                let response: reqwest::Response = reqwest::get(&file_url).await?;
-                let bytes = response.bytes().await?;
+                let mut bytes: Vec<u8> = Vec::new();
+                bot.download_file(&file.path, &mut bytes).await?;
 
-                if let Some(u) = msg.from {
-                    let user = u;
-                    let user_id: String = user.id.to_string();
-                    let nickname: &str = user.username.as_deref().unwrap_or_default();
+                let nickname: &str = user.username.as_deref().unwrap_or_default();
+                save_takki(&IMAGE_DIR, &user.id.to_string(), nickname, &bytes)?;
 
-                    let filename =
-                        Path::new(&*IMAGE_DIR).join(format!("takki_{}_{}.jpg", user_id, nickname));
-                    let mut file: std::fs::File = File::create(&filename)?;
-                    file.write_all(&bytes)?;
-
-                    // In case old named file exists, remove it
-                    let _ = fix_file_name(&user_id, nickname, &*IMAGE_DIR);
-
-                    bot.send_message(msg.chat.id, "Kuva vastaanotettu ja tallennettu")
-                        .await?;
-                }
+                bot.send_message(msg.chat.id, "Kuva vastaanotettu ja tallennettu")
+                    .await?;
             } else {
                 bot.send_message(msg.chat.id, "Kuvan lataus epäonnistui")
                     .await?;
@@ -71,7 +55,7 @@ async fn main() {
                 },
                 Err(_) => {
                     if msg.chat.is_private() {
-                        bot.send_message(msg.chat.id, "Unkown command. Try /help")
+                        bot.send_message(msg.chat.id, "Unknown command. Try /help")
                             .await?;
                     }
                     return Ok(());

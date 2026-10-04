@@ -1,3 +1,6 @@
+.git
+target
+images
+.env
 *.jpg
 *.png
-.git

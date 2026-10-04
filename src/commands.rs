@@ -1,33 +1,19 @@
-use crate::helpers::fix_file_name;
-use regex::Regex;
+use crate::helpers::{IMAGE_DIR, find_by_nick, fix_file_name, get_takki};
 use teloxide::prelude::*;
 use teloxide::utils::command::BotCommands;
 use teloxide::{Bot, RequestError};
 
-use crate::helpers::get_takki;
-
-use crate::helpers::IMAGE_DIR;
-
 pub async fn mun_takki(bot: &Bot, msg: &Message) -> Result<(), RequestError> {
     if let Some(user) = &msg.from {
-        if let Some(nickname) = &user.username {
-            let user_id = user.id.to_string();
-            let _ = fix_file_name(&user_id, nickname, &*IMAGE_DIR);
+        let nickname: &str = user.username.as_deref().unwrap_or_default();
+        let name: String = match &user.username {
+            Some(nickname) => format!("@{}", nickname),
+            None => user.first_name.clone(),
+        };
 
-            // Create regex to find takki by either ID or telegram nickname
-            // Try id first in case nickname has changed
-            let re: Regex =
-                match Regex::new(&format!(r"(?i)takki_({}|{})_.*\.jpg", user_id, nickname)) {
-                    Ok(r) => r,
-                    Err(_) => {
-                        bot.send_message(msg.chat.id, "Error in Takki regex")
-                            .await?;
-                        return Ok(());
-                    }
-                };
-
-            let _ = get_takki(&msg, &bot, re, &nickname).await;
-        }
+        // Find takki by ID, the nickname might have changed
+        let photo = fix_file_name(&user.id.to_string(), nickname, &IMAGE_DIR)?;
+        get_takki(msg, bot, photo, &name).await?;
     }
     Ok(())
 }
@@ -44,13 +30,8 @@ pub async fn sun_takki(bot: &Bot, msg: &Message) -> Result<(), RequestError> {
     } else {
         for nick in &message[1..] {
             let nick_cleaned: &str = nick.trim_start_matches("@");
-            let _ = match Regex::new(&format!(r"(?i)takki_.*_({}).jpg", nick_cleaned)) {
-                Ok(re) => get_takki(&msg, &bot, re, nick_cleaned).await,
-                Err(_) => {
-                    println!("Regex error for nickname: {}", nick_cleaned);
-                    Ok(())
-                }
-            };
+            let photo = find_by_nick(&IMAGE_DIR, nick_cleaned)?;
+            get_takki(msg, bot, photo, &format!("@{}", nick_cleaned)).await?;
         }
     }
     Ok(())
