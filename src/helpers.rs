@@ -6,6 +6,37 @@ use std::path::{Path, PathBuf};
 use std::time::SystemTime;
 use teloxide::{RequestError, prelude::*, types::*};
 pub static IMAGE_DIR: Lazy<String> = Lazy::new(|| env::var("IMAGE_DIR").unwrap_or(".".to_string()));
+pub static ALLOWED_CHATS: Lazy<Vec<ChatId>> =
+    Lazy::new(|| parse_chat_ids(&env::var("ALLOWED_CHATS").unwrap_or_default()));
+
+fn parse_chat_ids(value: &str) -> Vec<ChatId> {
+    value
+        .split(',')
+        .map(str::trim)
+        .filter(|id| !id.is_empty())
+        .filter_map(|id| match id.parse::<i64>() {
+            Ok(id) => Some(ChatId(id)),
+            Err(_) => {
+                log::warn!("Ignoring invalid chat id in ALLOWED_CHATS: {}", id);
+                None
+            }
+        })
+        .collect()
+}
+
+pub async fn is_in_allowed_chat(bot: &Bot, user_id: UserId, chats: &[ChatId]) -> bool {
+    if chats.is_empty() {
+        return true;
+    }
+    for &chat in chats {
+        match bot.get_chat_member(chat, user_id).await {
+            Ok(member) if member.is_present() => return true,
+            Ok(_) => {}
+            Err(err) => log::warn!("Failed to check membership in chat {}: {}", chat, err),
+        }
+    }
+    false
+}
 
 // Photos are named takki_<id>_<nickname>.jpg (or takki_<id>.jpg in the old format).
 // The user id is what identifies the owner, the nickname is only there for /suntakki.
@@ -136,6 +167,15 @@ mod tests {
     }
 
     #[test]
+    fn test_parse_chat_ids() {
+        assert_eq!(
+            parse_chat_ids(" -1001234567890, ,abc,-42 "),
+            vec![ChatId(-1001234567890), ChatId(-42)]
+        );
+        assert!(parse_chat_ids("").is_empty());
+    }
+
+    #[test]
     fn test_rename_old_file_to_new_nickname() {
         let dir = tempdir().unwrap();
         let user_id = "123";
@@ -181,7 +221,10 @@ mod tests {
 
         assert!(!old_file.exists());
         assert_eq!(fs::read_to_string(&new_file).unwrap(), "new");
-        assert_eq!(fix_file_name("123", "rob", dir_str).unwrap(), Some(new_file.clone()));
+        assert_eq!(
+            fix_file_name("123", "rob", dir_str).unwrap(),
+            Some(new_file.clone())
+        );
         assert_eq!(fs::read_to_string(&new_file).unwrap(), "new");
     }
 

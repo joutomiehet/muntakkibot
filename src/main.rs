@@ -28,6 +28,14 @@ async fn main() {
             let Some(user) = &msg.from else {
                 return Ok(());
             };
+            if !is_in_allowed_chat(&bot, user.id, &ALLOWED_CHATS).await {
+                bot.send_message(
+                    msg.chat.id,
+                    "Et ole missään sallitussa ryhmässä, kuvaa ei tallennettu",
+                )
+                .await?;
+                return Ok(());
+            }
             if let Some(last_photo) = photo.last() {
                 let file_id: &String = &last_photo.file.id;
                 let file: teloxide::types::File = bot.get_file(file_id).await?;
