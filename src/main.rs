@@ -1,5 +1,6 @@
 use dotenv::dotenv;
 use std::fs;
+use std::sync::Arc;
 use teloxide::{net::Download, prelude::*, utils::command::BotCommands};
 
 mod commands;
@@ -37,15 +38,13 @@ async fn main() {
                 return Ok(());
             }
             if let Some(last_photo) = photo.last() {
-                let file_id: &String = &last_photo.file.id;
-                let file: teloxide::types::File = bot.get_file(file_id).await?;
+                let file: teloxide::types::File = bot.get_file(last_photo.file.id.clone()).await?;
 
-                // Download photo
                 let mut bytes: Vec<u8> = Vec::new();
                 bot.download_file(&file.path, &mut bytes).await?;
 
                 let nickname: &str = user.username.as_deref().unwrap_or_default();
-                save_takki(&IMAGE_DIR, &user.id.to_string(), nickname, &bytes)?;
+                save_takki(&IMAGE_DIR, &user.id.to_string(), nickname, &bytes).map_err(Arc::new)?;
 
                 bot.send_message(msg.chat.id, "Kuva vastaanotettu ja tallennettu")
                     .await?;
