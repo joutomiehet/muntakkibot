@@ -1,4 +1,5 @@
 use crate::helpers::{IMAGE_DIR, find_by_nick, fix_file_name, get_takki};
+use std::sync::Arc;
 use teloxide::prelude::*;
 use teloxide::utils::command::BotCommands;
 use teloxide::{Bot, RequestError};
@@ -11,8 +12,7 @@ pub async fn mun_takki(bot: &Bot, msg: &Message) -> Result<(), RequestError> {
             None => user.first_name.clone(),
         };
 
-        // Find takki by ID, the nickname might have changed
-        let photo = fix_file_name(&user.id.to_string(), nickname, &IMAGE_DIR)?;
+        let photo = fix_file_name(&user.id.to_string(), nickname, &IMAGE_DIR).map_err(Arc::new)?;
         get_takki(msg, bot, photo, &name).await?;
     }
     Ok(())
@@ -30,7 +30,7 @@ pub async fn sun_takki(bot: &Bot, msg: &Message) -> Result<(), RequestError> {
     } else {
         for nick in &message[1..] {
             let nick_cleaned: &str = nick.trim_start_matches("@");
-            let photo = find_by_nick(&IMAGE_DIR, nick_cleaned)?;
+            let photo = find_by_nick(&IMAGE_DIR, nick_cleaned).map_err(Arc::new)?;
             get_takki(msg, bot, photo, &format!("@{}", nick_cleaned)).await?;
         }
     }
